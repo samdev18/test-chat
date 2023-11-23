@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Chat Room</title>
+</head>
+
+<body>
+    <div id="room-users"
+        style="background-color: green; padding: 10px; border-radius: 5px; max-height: 100px; overflow: auto;color:white;margin-bottom: 10px;">
+    </div>
+    <div id="messages" style="display: flex;flex-direction: column;"></div>
+    <input type="text" id="message">
+    <button onclick="sendMessage()">Enviar Mensagem</button>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const room = urlParams.get('room');
+        const name = urlParams.get('name');
+        const socket = io();
+
+        socket.emit('join room', { name, room });
+
+        socket.on('room users', (users) => {
+            document.getElementById('room-users').innerHTML =
+                `<h4>Usuários Online:</h4>` + users.join('<br>');
+        });
+
+        socket.on('notification', (message) => {
+            const containerElement = document.createElement('div');
+            const messageElement = document.createElement('div');
+            containerElement.style.display = "flex";
+            containerElement.style.justifyContent = "center"
+            messageElement.style.borderRadius = "5px"
+            messageElement.style.padding = "5px"
+            messageElement.style.background = "lightblue";
+            messageElement.style.color = "black";
+            messageElement.style.marginBottom = "10px";
+
+            messageElement.textContent = message;
+            containerElement.appendChild(messageElement)
+            document.getElementById('messages').appendChild(containerElement);
+        });
+
+        socket.on('chat message', ({ message, name: senderName }) => {
+            addMessageToChat(senderName === name ? 'Eu' : senderName, message);
+        });
+
+        function sendMessage() {
+            socket.emit('stop typing');
+            const message = document.getElementById('message').value;
+            socket.emit('chat message', { room, message, name });
+            document.getElementById('message').value = '';
+        }
+
+        function addMessageToChat(senderName, message) {
+            const containerElement = document.createElement('div');
+            const messageElement = document.createElement('div');
+            const nameElement = document.createElement('div');
+
+            messageElement.textContent = message;
+            containerElement.style.display = "flex"
+            if (senderName == "Eu") {
+                containerElement.style.justifyContent = "end"
+                messageElement.style.background = 'lightblue';
+                messageElement.style.padding = '5px';
+                messageElement.style.marginBottom = '5px';
+                messageElement.style.borderRadius = '5px';
+
+            } else {
+                containerElement.style.justifyContent = "start"
+                containerElement.style.flexDirection = "column"
+                messageElement.style.background = 'lightgreen';
+                messageElement.style.padding = '5px';
+                messageElement.style.marginBottom = '5px';
+                messageElement.style.borderRadius = '5px';
+                messageElement.style.width = 'fit-content';
+                nameElement.textContent = senderName
+
+                containerElement.appendChild(nameElement)
+            }
+            containerElement.appendChild(messageElement)
+            document.getElementById('messages').appendChild(containerElement);
+        }
+
+        let typingTimer;
+        const typingInterval = 2000;
+
+        const messageInput = document.getElementById('message');
+
+        messageInput.addEventListener('input', () => {
+            clearTimeout(typingTimer);
+
+            socket.emit('typing');
+            typingTimer = setTimeout(() => {
+                socket.emit('stop typing');
+            }, typingInterval);
+
+        });
+
+        socket.on('typing', (user) => {
+            let typingElement = document.getElementById(`typing-${user}`);
+            if (!typingElement) {
+                typingElement = document.createElement('div');
+                typingElement.id = `typing-${user}`;
+                typingElement.textContent = `${user} está digitando...`;
+                document.getElementById('messages').appendChild(typingElement);
+            }
+        });
+
+        socket.on('stop typing', (user) => {
+            const typingElement = document.getElementById(`typing-${user}`);
+            if (typingElement) {
+                typingElement.remove();
+            }
+        });
+    </script>
+</body>
+
+</html>

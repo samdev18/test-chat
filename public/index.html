@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat App</title>
+</head>
+<body>
+    <input type="text" id="name" placeholder="Seu nome">
+    <input type="text" id="room" placeholder="Nome da sala">
+    <button onclick="joinRoom()">Entrar na Sala</button>
+
+    <script>
+        function joinRoom() {
+            const name = document.getElementById('name').value;
+            const room = document.getElementById('room').value;
+            window.location.href = `/chat.html?name=${name}&room=${room}`;
+        }
+    </script>
+</body>
+</html>
